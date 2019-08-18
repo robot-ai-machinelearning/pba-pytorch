@@ -28,27 +28,21 @@ from PIL import ImageOps, ImageEnhance, ImageFilter, Image  # pylint:disable=g-m
 
 try:
     from pba.augmentation_transforms import random_flip, zero_pad_and_crop, cutout_numpy  # pylint: disable=unused-import
+    from pba.augmentation_transforms import TransformFunction
+    from pba.augmentation_transforms import ALL_TRANSFORMS, NAME_TO_TRANSFORM, TRANSFORM_NAMES  # pylint: disable=unused-import
+    from pba.augmentation_transforms import pil_wrap, pil_unwrap  # pylint: disable=unused-import
     from pba.augmentation_transforms import MEANS, STDS, PARAMETER_MAX  # pylint: disable=unused-import
     from pba.augmentation_transforms import _rotate_impl, _posterize_impl, _shear_x_impl, _shear_y_impl, _translate_x_impl, _translate_y_impl, _crop_impl, _solarize_impl, _cutout_pil_impl, _enhancer_impl
 except:
     from augmentation_transforms import random_flip, zero_pad_and_crop, cutout_numpy  # pylint: disable=unused-import
+    from augmentation_transforms import TransformFunction
+    from augmentation_transforms import ALL_TRANSFORMS, NAME_TO_TRANSFORM, TRANSFORM_NAMES  # pylint: disable=unused-import
+    from augmentation_transforms import pil_wrap, pil_unwrap  # pylint: disable=unused-import
     from augmentation_transforms import MEANS, STDS, PARAMETER_MAX  # pylint: disable=unused-import
     from augmentation_transforms import _rotate_impl, _posterize_impl, _shear_x_impl, _shear_y_impl, _translate_x_impl, _translate_y_impl, _crop_impl, _solarize_impl, _cutout_pil_impl, _enhancer_impl
 
 
-def pil_wrap(img):
-    """Convert the `img` numpy tensor to a PIL Image."""
-    return Image.fromarray(np.uint8(img)).convert('RGBA')
-
-def pil_unwrap(pil_img, image_size):
-    """Converts the PIL img to a numpy array."""
-    pic_array = (np.array(pil_img.getdata()).reshape((image_size, image_size, 4)))
-    i1, i2 = np.where(pic_array[:, :, 3] == 0)
-    pic_array = pic_array[:, :, :3]
-    pic_array[i1, i2] = [0, 0, 0]
-    return pic_array
-
-def apply_policy(policy, img, aug_policy, image_size, verbose=False):
+def apply_policy(policy, img, aug_policy, dset, image_size, verbose=False):
     """Apply the `policy` to the numpy `img`.
 
   Args:
@@ -70,7 +64,7 @@ def apply_policy(policy, img, aug_policy, image_size, verbose=False):
     else:
         raise ValueError('Unknown aug policy.')
     if count != 0:
-        pil_img = pil_wrap(img)
+        pil_img = pil_wrap(img, dset)
         policy = copy.copy(policy)
         random.shuffle(policy)
         for xform in policy:
@@ -87,22 +81,10 @@ def apply_policy(policy, img, aug_policy, image_size, verbose=False):
             assert count >= 0
             if count == 0:
                 break
-        return pil_unwrap(pil_img, image_size)
+        return pil_unwrap(pil_img, dset, image_size)
     else:
         return img
 
-class TransformFunction(object):
-    """Wraps the Transform function for pretty printing options."""
-
-    def __init__(self, func, name):
-        self.f = func
-        self.name = name
-
-    def __repr__(self):
-        return '<' + self.name + '>'
-
-    def __call__(self, pil_img):
-        return self.f(pil_img)
 
 class TransformT(object):
     """Each instance of this class represents a specific transform."""

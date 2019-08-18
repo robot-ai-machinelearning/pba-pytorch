@@ -14,8 +14,8 @@ class RayModel(Trainable):
         self.trainer = ModelTrainer(self.config)
 
     def _train(self):
-        acc = self.trainer.run_train_and_test()
-        return {"acc": acc}
+        train_acc, val_acc = self.trainer.run_model(self._iteration)
+        return {"train_acc": train_acc, "val_acc": val_acc}
     
     def _save(self, ckpt_dir):
         save_name = self.trainer.save_model(ckpt_dir, self._iteration)
@@ -40,8 +40,11 @@ def main():
             "training_iteration": 200,
         },
         "config": {
-            "hp_policy": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            "use_gpu": 1,
+            "data_path": "/home/zhoufan/Code/pba-pytorch/data",
+            "train_size": 1000,
+            "val_size": 7325,
+            "hp_policy": [0] * 60,
+            "batch_size": 128,
         },
         "local_dir": "results",
         "checkpoint_freq": 0,
@@ -75,7 +78,7 @@ def main():
 
     pbt = PopulationBasedTraining(
         time_attr="training_iteration",
-        reward_attr="acc",
+        reward_attr="val_acc",
         perturbation_interval=5,
         # hyperparam_mutations={
         #     "lr": lambda: random.uniform(0.0001, 0.02),
@@ -86,7 +89,7 @@ def main():
 
     anas = run_experiments(
         {
-            "pbt_mnist": train_spec,
+            "svhn": train_spec,
         },
         scheduler=pbt,
         reuse_actors=True,
